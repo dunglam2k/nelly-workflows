@@ -19,6 +19,8 @@ inputs:
     type: File
   slivar_input:
     type: File
+    secondaryFiles:
+      - .tbi
   slivar_info:
     type: string
 

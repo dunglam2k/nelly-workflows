@@ -104,6 +104,7 @@ arguments:
   - '--vcf'
   - valueFrom: 'bgzip'
     prefix: --compress_output
+  - '--force_overwrite'
   #- '--most_severe'
   - valueFrom: $(inputs.vep_output_file)
     prefix: --output_file

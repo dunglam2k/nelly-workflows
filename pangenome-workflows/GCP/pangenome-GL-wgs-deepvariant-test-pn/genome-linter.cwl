@@ -12,11 +12,14 @@ requirements:
     networkAccess: true
   EnvVarRequirement:
     envDef:
-      OPENROUTER_API_KEY: 'Enter your key'
+      OPENROUTER_API_KEY: $(inputs.openrouter_api_key)
   DockerRequirement:
     #dockerPull: 'dunglam2k/genome-linter:v1.0'
     dockerPull: 'dunglam2k/genome-linter:v1.01'
 inputs:
+  openrouter_api_key:
+    type: string
+    default: ""
   genomelinter_output_name:
     type: string
     default: "genomelinter-output.txt"
