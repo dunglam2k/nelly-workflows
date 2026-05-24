@@ -33,12 +33,12 @@ arguments:
   - $(inputs.sample_name)
   - --read-group
   - "ID:$(inputs.sample_name)\tSM:$(inputs.sample_name)\tLB:$(inputs.sample_name)\tPL:ILLUMINA"
-  - --rescue-attempts
-  - "2"
-  - --rescue-subgraph-size
-  - "2"
-  - --rescue-seed-limit
-  - "32"
+  # Mate rescue on complex graphs (large pangenomes like ksa_hg38) caused
+  # OOM / never-finishing runs with the default dozeu algorithm. The vg team's
+  # Giraffe best-practices page recommends disabling rescue entirely for
+  # complex graphs: https://github.com/vgteam/vg/wiki/Giraffe-best-practices
+  - --rescue-algorithm
+  - none
   - --max-dp-cells
   - "4000000"
 
