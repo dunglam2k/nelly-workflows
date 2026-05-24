@@ -1,0 +1,70 @@
+{
+    "graph": {
+        "class": "File",
+        "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/ksa_hg38.gbz"
+    },
+    "ref_prefix": "GRCh38",
+    "ref": {
+        "class": "File",
+        "location": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile",
+        "secondaryFiles": [
+            {"class": "File", "location": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile.fai"}
+        ]
+    },
+    "reads1": {
+        "class": "File",
+        "location": "keep:b4a8fbf918d6744687ac1b775456ca79+536/NIST-small_R1.fastq.gz"},
+    "reads2": {
+        "class": "File",
+        "location": "keep:b4a8fbf918d6744687ac1b775456ca79+536/NIST-small_R2.fastq.gz"},
+    "dist": {
+        "class": "File",
+        "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/ksa_hg38.dist"},
+    "min": {
+        "class": "File",
+        "location": "keep:56e94ed8e0d67d0c8e2616959d23ef2e+23423/ksa_hg38.min"},
+    "output_bam": "aligned.bam",
+    "dv_model_type": "WGS",
+    "dv_output_vcf": "variants.vcf.gz",
+    "dv_output_gvcf": "variants.gvcf.gz",
+    "metadata":{
+      "class": "File",
+      "location": "keep:3c9215d6f3acbd11de88305e3187dfc0+57/sample.yaml"
+    },
+    "slivar_gnomad": {
+      "class": "File",
+      "location": "keep:148bcb74e5d8268ac486d315e657f70b+3240/gnomad.hg38.genomes.v3.fix.zip"
+    },
+    "slivar_info": "INFO.gnomad_popmax_af < 0.01 && variant.FILTER == 'PASS'",
+    "vep_assembly": "GRCh38",
+    "vep_output_file": "vep-output.vcf.gz",
+    "pavs_custom_file": {
+      "class": "File",
+      "path": "keep:148bcb74e5d8268ac486d315e657f70b+3240/sorted.pavs.plugin.38.vcf.gz"
+    },
+    "pavs_custom_args": "PAVS,vcf,exact",
+    "go_custom_file": {
+      "class": "File",
+      "path": "keep:148bcb74e5d8268ac486d315e657f70b+3240/sorted.plugin.go.bed.gz"
+    },
+    "go_custom_args": "GO_CLASSES,bed,overlap",
+    "hpo_custom_file": {
+      "class": "File",
+      "path": "keep:148bcb74e5d8268ac486d315e657f70b+3240/sorted.plugin.pheno.bed.gz"
+    },
+    "hpo_custom_args": "PHENOTYPE,bed,overlap",
+    "ppi_custom_file": {
+      "class": "File",
+      "path": "keep:148bcb74e5d8268ac486d315e657f70b+3240/sorted.plugin.ppi.bed.gz"
+    },
+    "ppi_custom_args": "PPI,bed,overlap",
+    "vep_dir": {
+      "class": "Directory",
+      "path": "keep:ed620a5a2bdf6cb09b171c3219699562+542550"
+    },
+    "vep_fasta_file": {
+      "class": "File",
+      "path": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile"
+    },
+    "genomelinter_model": "openai/gpt-oss-20b:free"
+}
