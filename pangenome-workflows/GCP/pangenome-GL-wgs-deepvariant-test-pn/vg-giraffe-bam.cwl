@@ -10,14 +10,37 @@ requirements:
     ramMin: $(64 * 1024)
 
 baseCommand: [vg]
-arguments: [giraffe, -p, -t, $(runtime.cores), -Z, $(inputs.graph),
-            --ref-paths, $(inputs.ref_paths),
-            -f, $(inputs.reads1), -f, $(inputs.reads2),
-            -d, $(inputs.dist), -m, $(inputs.min),
-            --output-format, BAM,
-            --rescue-attempts, "2", --rescue-subgraph-size, "2",
-            --rescue-seed-limit, "32", --max-dp-cells, "4000000"
-           ]
+arguments:
+  - giraffe
+  - -p
+  - -t
+  - $(runtime.cores)
+  - -Z
+  - $(inputs.graph)
+  - --ref-paths
+  - $(inputs.ref_paths)
+  - -f
+  - $(inputs.reads1)
+  - -f
+  - $(inputs.reads2)
+  - -d
+  - $(inputs.dist)
+  - -m
+  - $(inputs.min)
+  - --output-format
+  - BAM
+  - --sample
+  - $(inputs.sample_name)
+  - --read-group
+  - "ID:$(inputs.sample_name)\tSM:$(inputs.sample_name)\tLB:$(inputs.sample_name)\tPL:ILLUMINA"
+  - --rescue-attempts
+  - "2"
+  - --rescue-subgraph-size
+  - "2"
+  - --rescue-seed-limit
+  - "32"
+  - --max-dp-cells
+  - "4000000"
 
 inputs:
   graph:
@@ -32,6 +55,9 @@ inputs:
     type: File
   min:
     type: File
+  sample_name:
+    type: string
+    default: sample
   bam_output:
     type: string
     default: aligned.bam

@@ -44,6 +44,11 @@ inputs:
     inputBinding:
       prefix: --num_shards
       valueFrom: $(runtime.cores)
+  intermediate_results_dir:
+    type: string
+    default: dv_intermediate
+    inputBinding:
+      prefix: --intermediate_results_dir
   regions:
     type: File?
     inputBinding:
@@ -52,9 +57,13 @@ inputs:
 outputs:
   vcf:
     type: File
+    secondaryFiles:
+      - .tbi
     outputBinding:
       glob: $(inputs.output_vcf)
   gvcf:
     type: File
+    secondaryFiles:
+      - .tbi
     outputBinding:
       glob: $(inputs.output_gvcf)
