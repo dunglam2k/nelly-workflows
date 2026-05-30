@@ -41,7 +41,7 @@ inputs:
   dv_output_gvcf:
     type: string
     default: variants.dv.gvcf.gz
-  eh_variant_catalog: File
+  eh_variant_catalog: File?
   eh_output_prefix:
     type: string
     default: eh_repeats
