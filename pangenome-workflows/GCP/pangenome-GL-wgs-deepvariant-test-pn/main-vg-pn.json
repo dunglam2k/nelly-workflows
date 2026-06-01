@@ -29,11 +29,7 @@
     "dv_model_type": "WGS",
     "dv_output_vcf": "variants.dv.vcf.gz",
     "dv_output_gvcf": "variants.dv.gvcf.gz",
-    "eh_variant_catalog": {
-        "class": "File",
-        "_comment": "Replace with the Keep path to the ExpansionHunter v5 variant catalog (e.g. Illumina's grch38/variant_catalog.json covering HTT/FMR1/ATXNs/etc.)",
-        "location": "keep:REPLACE_WITH_EH_CATALOG_LOCATOR/variant_catalog.json"
-    },
+    "_comment_eh_variant_catalog": "Optional. Defaults to Illumina's GRCh38 catalog baked into the dunglam2k/expansionhunter-grch38:v5.0.0 image. To override, add an 'eh_variant_catalog' File entry pointing at a custom catalog in Keep.",
     "eh_output_prefix": "eh_repeats",
     "combined_vcf_name": "combined.vcf.gz",
     "normalized_vcf_name": "normalized.vcf.gz",

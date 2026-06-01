@@ -4,7 +4,10 @@ requirements:
   InlineJavascriptRequirement: {}
   ShellCommandRequirement: {}
   DockerRequirement:
-    dockerPull: "quay.io/biocontainers/expansionhunter:5.0.0--h27087fc_1"
+    # Custom image that bakes Illumina's official GRCh38 catalog at
+    # /opt/eh-catalog/variant_catalog.json. Build with Dockerfile.expansionhunter
+    # in this directory. Pinned to v5.0.0 so the catalog matches the EH binary.
+    dockerPull: "dunglam2k/expansionhunter-grch38:v5.0.0"
   ResourceRequirement:
     coresMin: 8
     ramMin: $(16 * 1024)
@@ -13,6 +16,10 @@ arguments:
   - -c
   - |
     set -euo pipefail
+    # Use the user-supplied variant catalog if provided, otherwise fall back to
+    # the catalog baked into the image at /opt/eh-catalog/variant_catalog.json.
+    CATALOG="${ return inputs.variant_catalog ? inputs.variant_catalog.path : inputs.variant_catalog_path; }"
+    test -s "$CATALOG" || { echo "Variant catalog not found at $CATALOG" >&2; exit 1; }
     # ExpansionHunter v5 takes CRAM/BAM with index, FASTA with .fai, JSON catalog, and an output prefix.
     # Sex defaults to "female" if not provided; for known clinical loci this is the safer default
     # because HTT (autosomal) is genotyped identically either way and X-linked loci (FMR1, etc.)
@@ -20,7 +27,7 @@ arguments:
     ExpansionHunter \
       --reads "$(inputs.aligned_reads.path)" \
       --reference "$(inputs.ref.path)" \
-      --variant-catalog "$(inputs.variant_catalog.path)" \
+      --variant-catalog "$CATALOG" \
       --sex "$(inputs.sex)" \
       --output-prefix "$(inputs.output_prefix)" \
       --threads $(runtime.cores)
@@ -38,7 +45,10 @@ inputs:
     secondaryFiles:
       - .fai
   variant_catalog:
-    type: File
+    type: File?
+  variant_catalog_path:
+    type: string
+    default: "/opt/eh-catalog/variant_catalog.json"
   sex:
     type:
       type: enum
