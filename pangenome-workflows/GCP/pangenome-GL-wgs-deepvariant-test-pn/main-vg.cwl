@@ -149,6 +149,7 @@ steps:
       aligned_reads: vg-giraffe-bam/aligned_reads
       ref: ref
       ref_prefix: ref_prefix
+      sample_name: sample_name
     out: [aligned_reads_sorted]
     run: samtools-sort.cwl
 
