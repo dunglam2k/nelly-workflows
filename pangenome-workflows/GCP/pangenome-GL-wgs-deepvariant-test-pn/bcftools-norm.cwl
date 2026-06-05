@@ -13,12 +13,7 @@ arguments:
   - -c
   - |
     set -euo pipefail
-    bcftools norm --threads $(runtime.cores) \
-                  -f "$(inputs.ref.path)" \
-                  -m -any \
-                  -Oz \
-                  -o "$(inputs.output_name)" \
-                  "$(inputs.input_vcf.path)"
+    bcftools norm --threads $(runtime.cores) -f "$(inputs.ref.path)" -m -any -Oz -o "$(inputs.output_name)" "$(inputs.input_vcf.path)"
     bcftools index --threads $(runtime.cores) -t "$(inputs.output_name)"
 
 inputs:

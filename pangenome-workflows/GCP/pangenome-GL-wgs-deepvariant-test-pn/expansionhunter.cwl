@@ -17,13 +17,7 @@ arguments:
     # Sex defaults to "female" if not provided; for known clinical loci this is the safer default
     # because HTT (autosomal) is genotyped identically either way and X-linked loci (FMR1, etc.)
     # will be called as a single allele when --sex male is supplied.
-    ExpansionHunter \
-      --reads "$(inputs.aligned_reads.path)" \
-      --reference "$(inputs.ref.path)" \
-      --variant-catalog "$(inputs.variant_catalog.path)" \
-      --sex "$(inputs.sex)" \
-      --output-prefix "$(inputs.output_prefix)" \
-      --threads $(runtime.cores)
+    ExpansionHunter --reads "$(inputs.aligned_reads.path)" --reference "$(inputs.ref.path)" --variant-catalog "$(inputs.variant_catalog.path)" --sex "$(inputs.sex)" --output-prefix "$(inputs.output_prefix)" --threads $(runtime.cores)
     # ExpansionHunter writes .vcf (uncompressed). bgzip + tabix-index so downstream concat works.
     bgzip -f "$(inputs.output_prefix).vcf"
     tabix -p vcf "$(inputs.output_prefix).vcf.gz"
