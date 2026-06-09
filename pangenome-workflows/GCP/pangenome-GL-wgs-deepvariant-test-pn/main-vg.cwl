@@ -54,7 +54,16 @@ inputs:
   slivar_gnomad: File
   slivar_info:
     type: string
-    default: "INFO.gnomad_popmax_af < 0.01 && variant.FILTER == 'PASS'"
+    # Rare-variant gate: gnomAD popmax AF < 0.1% (was 1%) AND <=3 homozygotes in
+    # gnomAD AND a PASS call. This is a rarity/quality gate, not an impact ranker
+    # (slivar runs before VEP here, so no consequence annotation is available);
+    # impact + phenotype ranking happens downstream (genome-linter / Exomiser).
+    default: "INFO.gnomad_popmax_af < 0.001 && INFO.gnomad_nhomalt <= 3 && variant.FILTER == 'PASS'"
+  slivar_sample_expr:
+    type: string
+    # Genotype-quality gate: keep only confidently-genotyped het/hom-alt calls and
+    # tag them in INFO (high_quality=<sample>) for downstream inheritance reasoning.
+    default: "high_quality:sample.GQ >= 20 && sample.DP >= 10 && (sample.het || sample.hom_alt)"
   vep_assembly:
     type: string
     default: GRCh38
@@ -82,6 +91,24 @@ inputs:
       - .tbi
   ppi_custom_args: string
   vep_dir: Directory
+  # --- Exomiser (phenotype-driven gene/variant prioritisation) ---
+  exomiser_data:
+    type: Directory          # Keep collection: data/2512_hg38 + data/2512_phenotype
+  exomiser_assembly:
+    type: string
+    default: "hg38"
+  exomiser_data_version:
+    type: string
+    default: "2512"
+  hpo_terms:
+    type: string             # comma-separated HPO term IDs, e.g. "HP:0002072,HP:0000726"
+    default: ""
+  sample_sex:
+    type: string
+    default: "UNKNOWN"
+  exomiser_top_genes:
+    type: int
+    default: 10
   vep_fasta_file: File
   metadata: File
   genomelinter_output_name:
@@ -119,6 +146,15 @@ outputs:
   output_after_vep:
     type: File
     outputSource: vep/vep_output
+  output_exomiser_genes:
+    type: File
+    outputSource: exomiser/exomiser_genes_tsv
+  output_exomiser_variants:
+    type: File
+    outputSource: exomiser/exomiser_variants_tsv
+  output_exomiser_html:
+    type: File
+    outputSource: exomiser/exomiser_html
   output_after_genomelinter:
     type: File
     outputSource: genomelinter/genomelinter_output
@@ -213,6 +249,7 @@ steps:
       slivar_gnomad: slivar_gnomad
       slivar_input: bcftools-norm/normalized_vcf
       slivar_info: slivar_info
+      slivar_sample_expr: slivar_sample_expr
     out: [slivar_output]
     run: slivar.cwl
 
@@ -240,12 +277,27 @@ steps:
     out: [pheno_output]
     run: phenofrommetadata.cwl
 
+  # Phenotype-driven prioritisation: Exomiser ranks genes/variants from rarity +
+  # pathogenicity + HPO similarity (grounded), replacing the phenotype-label-only
+  # LLM ranker that buried the true causative gene.
+  exomiser:
+    in:
+      exomiser_vcf: bcftools-norm/normalized_vcf
+      exomiser_data: exomiser_data
+      exomiser_assembly: exomiser_assembly
+      exomiser_data_version: exomiser_data_version
+      hpo_terms: hpo_terms
+      sample_sex: sample_sex
+    out: [exomiser_genes_tsv, exomiser_variants_tsv, exomiser_json, exomiser_html]
+    run: exomiser.cwl
+
+  # The LLM now only writes a grounded narrative of Exomiser's ranked output
+  # (local model, no OpenRouter); it cannot recall or bury genes.
   genomelinter:
     in:
-      openrouter_api_key: openrouter_api_key
-      genomelinter_output_name: genomelinter_output_name
-      genomelinter_model: genomelinter_model
-      genomelinter_phenotypes: [phenofrommetadata/pheno_output]
-      genomelinter_input: [vep/vep_output]
+      exomiser_genes_tsv: exomiser/exomiser_genes_tsv
+      exomiser_variants_tsv: exomiser/exomiser_variants_tsv
+      phenotype: phenofrommetadata/pheno_output
+      top_genes: exomiser_top_genes
     out: [genomelinter_output]
-    run: genome-linter.cwl
+    run: genome-linter-llm.cwl

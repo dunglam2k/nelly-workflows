@@ -12,6 +12,14 @@ requirements:
   EnvVarRequirement:
     envDef:
       OPENROUTER_API_KEY: $(inputs.openrouter_api_key)
+      # Pass the phenotype, model and output name through the environment (CWL sets
+      # these as literal values — no shell re-parsing) and reference them as
+      # "$GL_*" below. This makes shell metacharacters in the phenotype label safe;
+      # previously --phenotype "$(...)" with a ';' (e.g. "Chorea;Huntington disease")
+      # split the command and crashed the linter.
+      GL_PHENOTYPE: $(inputs.genomelinter_phenotypes)
+      GL_MODEL: $(inputs.genomelinter_model)
+      GL_OUTPUT: $(inputs.genomelinter_output_name)
   DockerRequirement:
     #dockerPull: 'dunglam2k/genome-linter:v1.0'
     dockerPull: 'dunglam2k/genome-linter:v1.01'
@@ -27,7 +35,14 @@ arguments:
       *.gz) zcat "$in" > input.vcf ;;
       *) cp "$in" input.vcf ;;
     esac
-    python /genome-linter/genome-linter/src/main.py --output "$(inputs.genomelinter_output_name)" --openrouter_model "$(inputs.genomelinter_model)" --phenotype "$(inputs.genomelinter_phenotypes)" input.vcf
+    # Fail loudly if decompression yielded no variant records. Previously an empty
+    # input.vcf was fed to the linter, which crashed -- yet the run still reported
+    # green. A genome-linter failure must surface, not pass silently.
+    if ! grep -qvE '^#' input.vcf; then
+      echo "genome-linter: ERROR - input VCF contains no variant records" >&2
+      exit 1
+    fi
+    python /genome-linter/genome-linter/src/main.py --output "$GL_OUTPUT" --openrouter_model "$GL_MODEL" --phenotype "$GL_PHENOTYPE" input.vcf
 inputs:
   openrouter_api_key:
     type: string
