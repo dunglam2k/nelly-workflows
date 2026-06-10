@@ -1,0 +1,12 @@
+{
+  "exomiser_genes_tsv": {
+    "class": "File",
+    "location": "keep:5fe714d5c8fea90fc46d68af624761b6+380/results/exomiser.genes.tsv"
+  },
+  "exomiser_variants_tsv": {
+    "class": "File",
+    "location": "keep:5fe714d5c8fea90fc46d68af624761b6+380/results/exomiser.variants.tsv"
+  },
+  "phenotype": "Dementia",
+  "top_genes": 10
+}

@@ -13,12 +13,10 @@ arguments:
   - -c
   - |
     set -euo pipefail
-    bcftools norm --threads $(runtime.cores) \
-                  -f "$(inputs.ref.path)" \
-                  -m -any \
-                  -Oz \
-                  -o "$(inputs.output_name)" \
-                  "$(inputs.input_vcf.path)"
+    # "norm -m -any" left-aligns indels, which can emit records out of position
+    # order, so sort before indexing (otherwise "bcftools index" fails with
+    # "Unsorted positions on sequence ...").
+    bcftools norm --threads $(runtime.cores) -f "$(inputs.ref.path)" -m -any -Ou "$(inputs.input_vcf.path)" | bcftools sort -Oz -o "$(inputs.output_name)" -
     bcftools index --threads $(runtime.cores) -t "$(inputs.output_name)"
 
 inputs:

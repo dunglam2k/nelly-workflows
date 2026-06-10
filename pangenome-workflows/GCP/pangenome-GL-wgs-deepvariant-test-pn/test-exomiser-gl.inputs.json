@@ -1,0 +1,13 @@
+{
+  "exomiser_vcf": {
+    "class": "File",
+    "location": "keep:b2c8c2b940de5bf4d7881b652e12c24f+18026/normalized.vcf.gz"
+  },
+  "exomiser_data": {
+    "class": "Directory",
+    "location": "keep:00cbcbd45419c2f051889639deff3431+39145"
+  },
+  "hpo_terms": "HP:0000726",
+  "phenotype": "Dementia",
+  "sample_sex": "UNKNOWN"
+}
