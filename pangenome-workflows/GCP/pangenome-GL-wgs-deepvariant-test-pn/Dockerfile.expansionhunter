@@ -1,0 +1,26 @@
+# ExpansionHunter v5 with Illumina's official GRCh38 variant catalog baked in.
+#
+# Why bake it in? The catalog is tiny (~tens of KB) and pinning it to a known
+# tag makes deployments reproducible: no per-site Keep upload, no risk of a
+# catalog drift silently changing what the clinical pipeline genotypes.
+#
+# Catalog source: https://github.com/Illumina/ExpansionHunter (variant_catalog/grch38)
+# Pinned to the v5.0.0 tag so the catalog and the binary version match.
+#
+# Build & push:
+#   docker build -f Dockerfile.expansionhunter \
+#     -t dunglam2k/expansionhunter-grch38:v5.0.0 .
+#   docker push dunglam2k/expansionhunter-grch38:v5.0.0
+#
+# To use a custom catalog at runtime, pass `variant_catalog` to the CWL step;
+# it overrides the baked-in path.
+
+FROM curlimages/curl:8.5.0 AS fetcher
+ARG EH_TAG=v5.0.0
+RUN curl -fsSL --retry 5 --retry-delay 3 \
+        -o /tmp/variant_catalog.json \
+        "https://raw.githubusercontent.com/Illumina/ExpansionHunter/${EH_TAG}/variant_catalog/grch38/variant_catalog.json" \
+    && test -s /tmp/variant_catalog.json
+
+FROM quay.io/biocontainers/expansionhunter:5.0.0--hc26b3af_5
+COPY --from=fetcher /tmp/variant_catalog.json /opt/eh-catalog/variant_catalog.json
