@@ -43,13 +43,16 @@ disorders (Huntington/SCAs/DM1/FXS), plus a dev/prod intermediate-file policy.
 
 ### Validation
 
-Standalone runs on the cborg cluster reusing each disease's normalized VCF + EH
-outputs already in Keep:
-- **Huntington** (`HP:0002072` chorea-led): EH surfaces **HTT 18/46 CAG (≥36) →
-  Huntington disease** as the leading diagnosis, and the `ATXN3 chr14:92071010`
-  artifact no longer tops the Exomiser ranking.
-- **Tay-Sachs** (disguised `HP:0000726`): no pathogenic-range expansion is flagged
-  (correct), and HEXA remains the Exomiser lead — the SNV path is unchanged.
+Standalone runs on the cborg cluster (image `nelly-genome-linter-llm:v4`) reusing
+each disease's normalized VCF + EH outputs already in Keep — both completed exit 0:
+- **Huntington** (`HP:0002072` chorea-led; output `be96597e…+533`): EH surfaces
+  **HTT 18/46 CAG (≥36) → Huntington disease** and the narrative LEADS with it
+  ("must be treated as the leading candidate diagnosis") — HTT went from buried
+  **#220 → the lead**. The `ATXN3 chr14:92071010` frameshift artifact is **gone from
+  the Exomiser top-10** (top SNV candidate is now SEMA6B at a weak 0.70).
+- **Tay-Sachs** (disguised `HP:0000726`; output `6f6338c3…+529`): no pathogenic-range
+  expansion is flagged (correct), and removing the ATXN3 artifact promoted **HEXA
+  from #2 → #1** (0.9893, variant 1.0) — the true gene now leads the SNV path.
 
 ---
 
