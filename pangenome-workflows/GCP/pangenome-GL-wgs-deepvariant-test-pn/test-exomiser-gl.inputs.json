@@ -3,6 +3,14 @@
     "class": "File",
     "location": "keep:b2c8c2b940de5bf4d7881b652e12c24f+18026/normalized.vcf.gz"
   },
+  "eh_vcf": {
+    "class": "File",
+    "location": "keep:b2c8c2b940de5bf4d7881b652e12c24f+18026/eh_repeats.vcf.gz"
+  },
+  "eh_json": {
+    "class": "File",
+    "location": "keep:b2c8c2b940de5bf4d7881b652e12c24f+18026/eh_repeats.json"
+  },
   "exomiser_data": {
     "class": "Directory",
     "location": "keep:00cbcbd45419c2f051889639deff3431+39145"

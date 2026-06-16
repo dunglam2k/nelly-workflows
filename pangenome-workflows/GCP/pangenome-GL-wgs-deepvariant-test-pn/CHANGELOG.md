@@ -3,6 +3,56 @@
 All notable changes to the annotation/interpretation tail of this workflow
 (`main-vg.cwl`: VEP → slivar → genome-linter) are documented here.
 
+## [Unreleased] — Repeat-expansion handling + intermediate-output policy
+
+Follow-up to the Exomiser redesign, closing the gap it exposed on repeat-expansion
+disorders (Huntington/SCAs/DM1/FXS), plus a dev/prod intermediate-file policy.
+
+### Added
+
+- **`exclude-eh-regions.cwl`** — drops every VCF record inside an ExpansionHunter
+  ReferenceRegion before Exomiser. The exclusion BED is derived at run time from the
+  EH VCF (`POS..END` per locus, padded), so it always matches the catalogue used.
+  Removes (i) the genuine repeat as an unscorable symbolic `<STR>` allele and
+  (ii) DeepVariant's systematic frameshift **mis-calls** at STR loci — most notably a
+  spurious `ATXN3 chr14:92071010` frameshift that Exomiser scored pathogenic and
+  ranked **#1 in every sample** (EH genotyped ATXN3 normal, 20/24). Reuses the
+  existing `staphb/bcftools:1.19` image; no new image.
+- **genome-linter now ingests ExpansionHunter** — `blurb.py` reads `eh_repeats.json`,
+  flags loci whose larger allele reaches an (approximate full-penetrance) pathogenic
+  threshold from a baked table (HTT, ATXN1/2/3/7, SCA6/8/10/12/17, DRPLA, Kennedy,
+  Friedreich, FXS, DM1/2, C9orf72, EPM1, HDL2), and presents them to the LLM as
+  **leading candidate diagnoses** — because Exomiser cannot score repeat expansions,
+  a true HTT/HD case is otherwise invisible. New `--eh-json` arg + optional `eh_json`
+  CWL input (wired from the `expansionhunter` step). Image bumped to
+  `nelly-genome-linter-llm:v4`.
+- **`submit.sh`** — dev/prod submission wrapper. `dev` (default) passes
+  `--no-trash-intermediate` (keep every step's intermediate Keep collection for
+  debugging); `prod` passes `--trash-intermediate` (trash intermediate step outputs
+  **only on workflow success**, so a failed run stays debuggable). Declared workflow
+  outputs are always kept.
+
+### Changed
+
+- **`main-vg.cwl`** — insert `exclude-eh-regions` between `bcftools-norm` and
+  `exomiser` (Exomiser now consumes the filtered VCF); feed `expansionhunter/json`
+  into the `genomelinter` step. `slivar` still sees the full normalized VCF.
+- **`test-exomiser-gl.cwl`** — now a 3-step tail (exclude-eh-regions → exomiser →
+  genomelinter) and takes `eh_vcf` + `eh_json`; inputs added for both the Tay-Sachs
+  and Huntington call sets.
+
+### Validation
+
+Standalone runs on the cborg cluster reusing each disease's normalized VCF + EH
+outputs already in Keep:
+- **Huntington** (`HP:0002072` chorea-led): EH surfaces **HTT 18/46 CAG (≥36) →
+  Huntington disease** as the leading diagnosis, and the `ATXN3 chr14:92071010`
+  artifact no longer tops the Exomiser ranking.
+- **Tay-Sachs** (disguised `HP:0000726`): no pathogenic-range expansion is flagged
+  (correct), and HEXA remains the Exomiser lead — the SNV path is unchanged.
+
+---
+
 ## [Unreleased] — Phenotype-driven prioritisation + grounded interpretation
 
 This release replaces the phenotype-label-only LLM "genome-linter" with an

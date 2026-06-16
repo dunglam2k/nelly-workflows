@@ -277,12 +277,24 @@ steps:
     out: [pheno_output]
     run: phenofrommetadata.cwl
 
+  # Strip records inside ExpansionHunter ReferenceRegions before Exomiser: DeepVariant
+  # mis-calls these STR loci as coding frameshift indels (a spurious ATXN3 frameshift was
+  # ranking #1 in every sample) and the genuine expansion is an unscorable symbolic <STR>
+  # allele -- both pollute the ranking. The real repeat genotypes go to the genome-linter
+  # via eh_repeats.json instead.
+  exclude-eh-regions:
+    in:
+      input_vcf: bcftools-norm/normalized_vcf
+      eh_vcf: expansionhunter/vcf
+    out: [filtered_vcf]
+    run: exclude-eh-regions.cwl
+
   # Phenotype-driven prioritisation: Exomiser ranks genes/variants from rarity +
   # pathogenicity + HPO similarity (grounded), replacing the phenotype-label-only
   # LLM ranker that buried the true causative gene.
   exomiser:
     in:
-      exomiser_vcf: bcftools-norm/normalized_vcf
+      exomiser_vcf: exclude-eh-regions/filtered_vcf
       exomiser_data: exomiser_data
       exomiser_assembly: exomiser_assembly
       exomiser_data_version: exomiser_data_version
@@ -291,12 +303,14 @@ steps:
     out: [exomiser_genes_tsv, exomiser_variants_tsv, exomiser_json, exomiser_html]
     run: exomiser.cwl
 
-  # The LLM now only writes a grounded narrative of Exomiser's ranked output
-  # (local model, no OpenRouter); it cannot recall or bury genes.
+  # The LLM writes a grounded narrative of Exomiser's ranked output PLUS any pathogenic-
+  # range repeat expansion from ExpansionHunter (which Exomiser cannot score). Local
+  # model, no OpenRouter; it cannot recall or bury genes.
   genomelinter:
     in:
       exomiser_genes_tsv: exomiser/exomiser_genes_tsv
       exomiser_variants_tsv: exomiser/exomiser_variants_tsv
+      eh_json: expansionhunter/json
       phenotype: phenofrommetadata/pheno_output
       top_genes: exomiser_top_genes
     out: [genomelinter_output]
