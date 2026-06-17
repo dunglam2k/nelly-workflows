@@ -41,6 +41,21 @@ disorders (Huntington/SCAs/DM1/FXS), plus a dev/prod intermediate-file policy.
   genomelinter) and takes `eh_vcf` + `eh_json`; inputs added for both the Tay-Sachs
   and Huntington call sets.
 
+### Fixed
+
+- **`vg-giraffe-bam.cwl`** — removed a false-positive integrity guard that blocked
+  every full-WGS run. A prior revision (`fd19941`) wrapped vg in `bash -c` and
+  asserted the output BAM ended in the exact canonical 28-byte htslib BGZF EOF
+  marker. At WGS scale this fired even though vg giraffe mapped all reads and exited
+  0 with a complete BAM (the node had 100+ GB free — not a truncation): vg's stdout
+  BAM simply does not terminate in that exact marker, and `samtools-sort` tolerates a
+  missing marker (warns, never crashes) and rewrites a clean BAM/CRAM anyway. The
+  guard rejected a perfectly good BAM and failed the whole pipeline ~13 h in.
+  Reverted to the proven `baseCommand:[vg]` + CWL `stdout:` capture form (keeping the
+  bare-`--read-group` ID fix that was the *actual* cure for the historical
+  `samtools sort: [E::aux_parse] unrecognized type 's'` crash). If a real integrity
+  check is wanted, run `samtools quickcheck` on the *sorted* output instead.
+
 ### Validation
 
 Standalone runs on the cborg cluster (image `nelly-genome-linter-llm:v4`) reusing
