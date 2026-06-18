@@ -55,6 +55,13 @@ disorders (Huntington/SCAs/DM1/FXS), plus a dev/prod intermediate-file policy.
   bare-`--read-group` ID fix that was the *actual* cure for the historical
   `samtools sort: [E::aux_parse] unrecognized type 's'` crash). If a real integrity
   check is wanted, run `samtools quickcheck` on the *sorted* output instead.
+- **`expansionhunter.cwl`** — fixed a null-dereference that crashed the step
+  whenever no custom `eh_variant_catalog` was supplied (the normal case — the GRCh38
+  catalog is baked into the image). The wrapper computes a guarded `$CATALOG`
+  (user-supplied catalog *or* the baked fallback) but then passed the raw
+  `$(inputs.variant_catalog.path)` to `--variant-catalog`, which throws
+  `Cannot read properties of null (reading 'path')` when the optional input is unset.
+  Now passes `$CATALOG`.
 
 ### Validation
 
@@ -68,6 +75,21 @@ each disease's normalized VCF + EH outputs already in Keep — both completed ex
 - **Tay-Sachs** (disguised `HP:0000726`; output `6f6338c3…+529`): no pathogenic-range
   expansion is flagged (correct), and removing the ATXN3 artifact promoted **HEXA
   from #2 → #1** (0.9893, variant 1.0) — the true gene now leads the SNV path.
+
+**Full end-to-end from raw reads** (the complete `main-vg.cwl`, FASTQ → narrative,
+cborg cluster) — both completed **exit 0** with the two fixes above; the single `ref`
+is the UCSC-named `hg38.fa` (matches the chr-named giraffe BAM), VEP keeps its own
+Ensembl-named FASTA:
+- **Huntington** (`HP:0002072,HP:0000726,HP:0002311`; output `f1d4b1ce…+17800`):
+  ExpansionHunter genotypes **HTT 18/46 CAG** and the narrative **LEADS with
+  Huntington disease** — reproduced from raw reads, not just from a pre-computed VCF.
+  The ATXN3 artifact is absent from the Exomiser top-10.
+- **Tay-Sachs** (`HP:0000726`; output `b8b7bfb4…+17797`): **HEXA #1** (0.9893,
+  variant 1.0), narrative cites the true `15-72346234-C-G` splice variant; no false
+  expansion.
+- **Cleanup policy** confirmed on these runs: the `dev` run kept all 16 intermediate
+  step collections; the `prod` run (`--trash-intermediate`) trashed every intermediate
+  while retaining the final declared outputs (the interpretable files).
 
 ---
 
