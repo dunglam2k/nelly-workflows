@@ -3,6 +3,96 @@
 All notable changes to the annotation/interpretation tail of this workflow
 (`main-vg.cwl`: VEP → slivar → genome-linter) are documented here.
 
+## [Unreleased] — Repeat-expansion handling + intermediate-output policy
+
+Follow-up to the Exomiser redesign, closing the gap it exposed on repeat-expansion
+disorders (Huntington/SCAs/DM1/FXS), plus a dev/prod intermediate-file policy.
+
+### Added
+
+- **`exclude-eh-regions.cwl`** — drops every VCF record inside an ExpansionHunter
+  ReferenceRegion before Exomiser. The exclusion BED is derived at run time from the
+  EH VCF (`POS..END` per locus, padded), so it always matches the catalogue used.
+  Removes (i) the genuine repeat as an unscorable symbolic `<STR>` allele and
+  (ii) DeepVariant's systematic frameshift **mis-calls** at STR loci — most notably a
+  spurious `ATXN3 chr14:92071010` frameshift that Exomiser scored pathogenic and
+  ranked **#1 in every sample** (EH genotyped ATXN3 normal, 20/24). Reuses the
+  existing `staphb/bcftools:1.19` image; no new image.
+- **genome-linter now ingests ExpansionHunter** — `blurb.py` reads `eh_repeats.json`,
+  flags loci whose larger allele reaches an (approximate full-penetrance) pathogenic
+  threshold from a baked table (HTT, ATXN1/2/3/7, SCA6/8/10/12/17, DRPLA, Kennedy,
+  Friedreich, FXS, DM1/2, C9orf72, EPM1, HDL2), and presents them to the LLM as
+  **leading candidate diagnoses** — because Exomiser cannot score repeat expansions,
+  a true HTT/HD case is otherwise invisible. New `--eh-json` arg + optional `eh_json`
+  CWL input (wired from the `expansionhunter` step). Image bumped to
+  `nelly-genome-linter-llm:v4`.
+- **`submit.sh`** — dev/prod submission wrapper. `dev` (default) passes
+  `--no-trash-intermediate` (keep every step's intermediate Keep collection for
+  debugging); `prod` passes `--trash-intermediate` (trash intermediate step outputs
+  **only on workflow success**, so a failed run stays debuggable). Declared workflow
+  outputs are always kept.
+
+### Changed
+
+- **`main-vg.cwl`** — insert `exclude-eh-regions` between `bcftools-norm` and
+  `exomiser` (Exomiser now consumes the filtered VCF); feed `expansionhunter/json`
+  into the `genomelinter` step. `slivar` still sees the full normalized VCF.
+- **`test-exomiser-gl.cwl`** — now a 3-step tail (exclude-eh-regions → exomiser →
+  genomelinter) and takes `eh_vcf` + `eh_json`; inputs added for both the Tay-Sachs
+  and Huntington call sets.
+
+### Fixed
+
+- **`vg-giraffe-bam.cwl`** — removed a false-positive integrity guard that blocked
+  every full-WGS run. A prior revision (`fd19941`) wrapped vg in `bash -c` and
+  asserted the output BAM ended in the exact canonical 28-byte htslib BGZF EOF
+  marker. At WGS scale this fired even though vg giraffe mapped all reads and exited
+  0 with a complete BAM (the node had 100+ GB free — not a truncation): vg's stdout
+  BAM simply does not terminate in that exact marker, and `samtools-sort` tolerates a
+  missing marker (warns, never crashes) and rewrites a clean BAM/CRAM anyway. The
+  guard rejected a perfectly good BAM and failed the whole pipeline ~13 h in.
+  Reverted to the proven `baseCommand:[vg]` + CWL `stdout:` capture form (keeping the
+  bare-`--read-group` ID fix that was the *actual* cure for the historical
+  `samtools sort: [E::aux_parse] unrecognized type 's'` crash). If a real integrity
+  check is wanted, run `samtools quickcheck` on the *sorted* output instead.
+- **`expansionhunter.cwl`** — fixed a null-dereference that crashed the step
+  whenever no custom `eh_variant_catalog` was supplied (the normal case — the GRCh38
+  catalog is baked into the image). The wrapper computes a guarded `$CATALOG`
+  (user-supplied catalog *or* the baked fallback) but then passed the raw
+  `$(inputs.variant_catalog.path)` to `--variant-catalog`, which throws
+  `Cannot read properties of null (reading 'path')` when the optional input is unset.
+  Now passes `$CATALOG`.
+
+### Validation
+
+Standalone runs on the cborg cluster (image `nelly-genome-linter-llm:v4`) reusing
+each disease's normalized VCF + EH outputs already in Keep — both completed exit 0:
+- **Huntington** (`HP:0002072` chorea-led; output `be96597e…+533`): EH surfaces
+  **HTT 18/46 CAG (≥36) → Huntington disease** and the narrative LEADS with it
+  ("must be treated as the leading candidate diagnosis") — HTT went from buried
+  **#220 → the lead**. The `ATXN3 chr14:92071010` frameshift artifact is **gone from
+  the Exomiser top-10** (top SNV candidate is now SEMA6B at a weak 0.70).
+- **Tay-Sachs** (disguised `HP:0000726`; output `6f6338c3…+529`): no pathogenic-range
+  expansion is flagged (correct), and removing the ATXN3 artifact promoted **HEXA
+  from #2 → #1** (0.9893, variant 1.0) — the true gene now leads the SNV path.
+
+**Full end-to-end from raw reads** (the complete `main-vg.cwl`, FASTQ → narrative,
+cborg cluster) — both completed **exit 0** with the two fixes above; the single `ref`
+is the UCSC-named `hg38.fa` (matches the chr-named giraffe BAM), VEP keeps its own
+Ensembl-named FASTA:
+- **Huntington** (`HP:0002072,HP:0000726,HP:0002311`; output `f1d4b1ce…+17800`):
+  ExpansionHunter genotypes **HTT 18/46 CAG** and the narrative **LEADS with
+  Huntington disease** — reproduced from raw reads, not just from a pre-computed VCF.
+  The ATXN3 artifact is absent from the Exomiser top-10.
+- **Tay-Sachs** (`HP:0000726`; output `b8b7bfb4…+17797`): **HEXA #1** (0.9893,
+  variant 1.0), narrative cites the true `15-72346234-C-G` splice variant; no false
+  expansion.
+- **Cleanup policy** confirmed on these runs: the `dev` run kept all 16 intermediate
+  step collections; the `prod` run (`--trash-intermediate`) trashed every intermediate
+  while retaining the final declared outputs (the interpretable files).
+
+---
+
 ## [Unreleased] — Phenotype-driven prioritisation + grounded interpretation
 
 This release replaces the phenotype-label-only LLM "genome-linter" with an

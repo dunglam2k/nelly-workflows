@@ -8,6 +8,7 @@ class: CommandLineTool
 # Direct command (no inline shell): blurb.py reads the phenotype from $GL_PHENOTYPE.
 baseCommand: [python, /app/blurb.py]
 requirements:
+  InlineJavascriptRequirement: {}
   ResourceRequirement:
     ramMin: 12288
     coresMin: 8
@@ -15,7 +16,7 @@ requirements:
     envDef:
       GL_PHENOTYPE: $(inputs.phenotype)
   DockerRequirement:
-    dockerPull: 'nelly-genome-linter-llm:v3'
+    dockerPull: 'nelly-genome-linter-llm:v4'
 arguments:
   - prefix: --genes
     valueFrom: $(inputs.exomiser_genes_tsv.path)
@@ -25,11 +26,18 @@ arguments:
     valueFrom: $(inputs.top_genes)
   - prefix: --output
     valueFrom: $(inputs.output_name)
+  # ExpansionHunter JSON (optional): pathogenic-range repeat expansions are surfaced as
+  # candidate diagnoses, since Exomiser cannot score repeat expansions. Omitted from the
+  # command line when no EH json is wired in (valueFrom -> null).
+  - prefix: --eh-json
+    valueFrom: "$(inputs.eh_json ? inputs.eh_json.path : null)"
 inputs:
   exomiser_genes_tsv:
     type: File
   exomiser_variants_tsv:
     type: File
+  eh_json:
+    type: File?
   phenotype:
     type: string
     default: ""
