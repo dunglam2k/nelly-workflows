@@ -214,6 +214,53 @@ def build_prompt(phenotype, genes, vmap, eh_flags=None):
     return instruction
 
 
+def run_llm(prompt, model_path):
+    """Invoke the local GGUF model. Imported lazily so the module (and the whole
+    grounding pipeline above) can be imported and tested without llama_cpp / a model
+    file present."""
+    from llama_cpp import Llama
+    llm = Llama(model_path=model_path, n_ctx=8192, n_threads=os.cpu_count(), verbose=False)
+    out = llm.create_chat_completion(
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2, max_tokens=600)
+    return out["choices"][0]["message"]["content"].strip()
+
+
+def interpret(prompt, model_path, no_llm=False):
+    """Return (interpretation_text, note). Never raises for an LLM problem: this is
+    the FINAL step of a ~30 h pipeline, so a missing/broken model must NOT discard
+    Exomiser's ranking. On any failure we fall back to the grounded evidence block
+    itself so the run still yields a usable, non-empty report."""
+    if no_llm:
+        return prompt, "LLM skipped (GL_NO_LLM/--no-llm); showing grounded evidence only."
+    try:
+        return run_llm(prompt, model_path), ""
+    except Exception as e:  # model missing, OOM, llama_cpp import failure, ...
+        sys.stderr.write("genome-linter-llm: WARN LLM unavailable (%s); "
+                         "falling back to grounded evidence.\n" % e)
+        return prompt, "LLM unavailable (%s); showing grounded evidence only." % e
+
+
+def write_report(output, symbols, eh_flags, text, note=""):
+    """Always writes a report file. A final interpretation step must never leave the
+    pipeline with no output (that is what makes a step's output show as Unavailable)."""
+    with open(output, "w") as fh:
+        fh.write("# Genome-linter interpretation (Exomiser + ExpansionHunter grounded)\n\n")
+        if note:
+            fh.write("_%s_\n\n" % note)
+        if eh_flags:
+            fh.write("Pathogenic-range repeat expansions (ExpansionHunter): " + "; ".join(
+                "%s %s units (>=%d) -> %s" % (f["gene"], f["genotype"], f["threshold"], f["disease"])
+                for f in eh_flags) + "\n\n")
+        if symbols:
+            fh.write("Top Exomiser candidates (SNV/indel): " + ", ".join(
+                "%d.%s" % (i, s) for i, s in enumerate(symbols, 1)) + "\n\n")
+        else:
+            fh.write("Top Exomiser candidates (SNV/indel): none returned.\n\n")
+        fh.write(text + "\n")
+    sys.stderr.write("genome-linter-llm: wrote %s (%d chars)\n" % (output, len(text)))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--genes", required=True)
@@ -222,40 +269,39 @@ def main():
     ap.add_argument("--output", required=True)
     ap.add_argument("--model", default=os.environ.get("GL_MODEL_PATH", "/model/model.gguf"))
     ap.add_argument("--top", type=int, default=10)
+    ap.add_argument("--no-llm", dest="no_llm",
+                    default=os.environ.get("GL_NO_LLM", "") not in ("", "0", "false"),
+                    action="store_true",
+                    help="Skip the local LLM and emit the grounded evidence block only "
+                         "(also via GL_NO_LLM=1). Used by tests and as a safe fallback.")
     ap.add_argument("--eh-json", dest="eh_json", default="",
                     help="ExpansionHunter JSON; pathogenic-range expansions are surfaced "
                          "as candidate diagnoses (Exomiser cannot score repeat expansions).")
     a = ap.parse_args()
 
     genes = read_genes(a.genes, a.top)
-    if not genes:
-        sys.stderr.write("genome-linter-llm: ERROR - no genes in %s\n" % a.genes)
-        sys.exit(1)
     symbols = [pick(g, "GENE_SYMBOL", "GENE", default="?") for g in genes]
     vmap = variants_for(a.variants, symbols) if a.variants else {}
     eh_flags = read_eh(a.eh_json)
     if eh_flags:
         sys.stderr.write("genome-linter-llm: EH pathogenic-range expansions: %s\n" %
                          ", ".join("%s(%d)" % (f["gene"], f["max_allele"]) for f in eh_flags))
+
+    # No SNV/indel candidates AND no pathogenic repeat expansion: still emit a report
+    # (inconclusive) rather than exit non-zero, which would fail the whole pipeline at
+    # its final step and leave the declared output Unavailable.
+    if not genes and not eh_flags:
+        sys.stderr.write("genome-linter-llm: WARN no Exomiser genes and no EH expansion; "
+                         "writing inconclusive report.\n")
+        write_report(a.output, symbols, eh_flags,
+                     "No candidate genes were returned by Exomiser and no pathogenic-range "
+                     "repeat expansion was detected. The result is inconclusive; review the "
+                     "upstream VCF and phenotype terms.")
+        return
+
     prompt = build_prompt(a.phenotype, genes, vmap, eh_flags)
-
-    from llama_cpp import Llama
-    llm = Llama(model_path=a.model, n_ctx=8192, n_threads=os.cpu_count(), verbose=False)
-    out = llm.create_chat_completion(
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2, max_tokens=600)
-    text = out["choices"][0]["message"]["content"].strip()
-
-    with open(a.output, "w") as fh:
-        fh.write("# Genome-linter interpretation (Exomiser + ExpansionHunter grounded)\n\n")
-        if eh_flags:
-            fh.write("Pathogenic-range repeat expansions (ExpansionHunter): " + "; ".join(
-                "%s %s units (>=%d) -> %s" % (f["gene"], f["genotype"], f["threshold"], f["disease"])
-                for f in eh_flags) + "\n\n")
-        fh.write("Top Exomiser candidates (SNV/indel): " + ", ".join(
-            "%d.%s" % (i, s) for i, s in enumerate(symbols, 1)) + "\n\n")
-        fh.write(text + "\n")
-    sys.stderr.write("genome-linter-llm: wrote %s (%d chars)\n" % (a.output, len(text)))
+    text, note = interpret(prompt, a.model, no_llm=a.no_llm)
+    write_report(a.output, symbols, eh_flags, text, note)
 
 
 if __name__ == "__main__":

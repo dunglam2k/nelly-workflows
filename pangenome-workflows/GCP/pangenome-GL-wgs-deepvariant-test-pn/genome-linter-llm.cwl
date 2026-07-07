@@ -16,7 +16,7 @@ requirements:
     envDef:
       GL_PHENOTYPE: $(inputs.phenotype)
   DockerRequirement:
-    dockerPull: 'nelly-genome-linter-llm:v4'
+    dockerPull: 'nelly-genome-linter-llm:v5'
 arguments:
   - prefix: --genes
     valueFrom: $(inputs.exomiser_genes_tsv.path)

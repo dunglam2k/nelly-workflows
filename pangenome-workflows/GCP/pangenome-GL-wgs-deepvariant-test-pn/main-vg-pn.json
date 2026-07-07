@@ -6,11 +6,12 @@
         "class": "File",
         "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/ksa_hg38.gbz"
     },
+    "_comment_ref": "MUST be the UCSC chr-named hg38.fa: the vg-giraffe BAM is chr-named, and this single ref drives samtools-sort/markdup + DeepVariant + ExpansionHunter + bcftools-norm. Do NOT use the Ensembl-numeric fastafile here (contig-name mismatch); VEP keeps its own numeric vep_fasta_file below.",
     "ref": {
         "class": "File",
-        "location": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile",
+        "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/hg38.fa",
         "secondaryFiles": [
-            {"class": "File", "location": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile.fai"}
+            {"class": "File", "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/hg38.fa.fai"}
         ]
     },
     "reads1": {
@@ -41,7 +42,7 @@
         "class": "File",
         "location": "keep:148bcb74e5d8268ac486d315e657f70b+3240/gnomad.hg38.genomes.v3.fix.zip"
     },
-    "slivar_info": "INFO.gnomad_popmax_af < 0.01 && variant.FILTER == 'PASS'",
+    "_comment_slivar": "slivar_info / slivar_sample_expr intentionally omitted: the strengthened rarity+quality gate now lives as the validated default in main-vg.cwl. Do not re-add a stale override here (an old permissive override was the reason a required setting drifted out of sync).",
     "vep_assembly": "GRCh38",
     "vep_output_file": "vep-output.vcf.gz",
     "pavs_custom_file": {
@@ -72,6 +73,15 @@
         "class": "File",
         "path": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile"
     },
-    "genomelinter_model": "openai/gpt-oss-20b:free",
-    "openrouter_api_key": ""
+    "_comment_exomiser": "Exomiser phenotype-driven prioritisation. exomiser_data is the 2512 hg38+phenotype bundle Keep collection (required). hpo_terms is a comma-separated list of the patient's HPO ids driving the ranking (empty -> variant-only, much weaker); set it per sample to match the metadata phenotype. sample_sex is UNKNOWN|MALE|FEMALE.",
+    "exomiser_data": {
+        "class": "Directory",
+        "location": "keep:00cbcbd45419c2f051889639deff3431+39145"
+    },
+    "exomiser_assembly": "hg38",
+    "exomiser_data_version": "2512",
+    "hpo_terms": "HP:0000726",
+    "sample_sex": "UNKNOWN",
+    "exomiser_top_genes": 10,
+    "genomelinter_output_name": "genomelinter-output.txt"
 }

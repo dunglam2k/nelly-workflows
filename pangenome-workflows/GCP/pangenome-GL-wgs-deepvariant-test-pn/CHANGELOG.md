@@ -3,6 +3,44 @@
 All notable changes to the annotation/interpretation tail of this workflow
 (`main-vg.cwl`: VEP → slivar → genome-linter) are documented here.
 
+## [Unreleased] — Runnable input template, genome-linter robustness, tests
+
+Fixes the two problems that blocked a rerun, and adds a test suite so neither can
+silently recur.
+
+### Fixed
+
+- **`main-vg-pn.json` could not launch** — the canonical example input predated the
+  Exomiser redesign and was **missing the required `exomiser_data`** Directory input
+  (no default → a run cannot start). It also pointed `ref` at the old Ensembl-numeric
+  `fastafile`; `ref` **must** be the UCSC chr-named `hg38.fa`, since the vg-giraffe BAM
+  is chr-named and this single `ref` drives samtools/DeepVariant/ExpansionHunter/norm
+  (VEP keeps its own numeric `vep_fasta_file`). Added the Exomiser inputs
+  (`exomiser_data`, `exomiser_assembly`, `exomiser_data_version`, `hpo_terms`,
+  `sample_sex`, `exomiser_top_genes`), fixed `ref`, and dropped the stale permissive
+  `slivar_info` override (the strengthened gate is the validated default in
+  `main-vg.cwl`; a drifting override is what broke here).
+
+### Added
+
+- **`tests/`** (pytest, offline — no cluster/GPU/LLM):
+  - `test_inputs_complete.py` — parses `main-vg.cwl`'s required inputs and asserts every
+    `main-vg*.json` supplies them. Fails on exactly the `exomiser_data`-missing bug above.
+  - `test_blurb.py` — exercises the genome-linter grounding on the **real** Tay-Sachs and
+    Huntington outputs (trimmed fixtures under `tests/fixtures/`): HEXA ranks #1 for TS;
+    HTT is flagged as a pathogenic-range expansion (46 ≥ 36) for HD while normal-range
+    ATXN3 (20/24) is not; and the report is always written (see below).
+
+### Changed
+
+- **`genome-linter-llm/blurb.py` — never sink the pipeline at its final step.** An empty
+  Exomiser ranking, or an LLM that is missing/OOMs/crashes, previously caused
+  `sys.exit(1)` / an unhandled exception → **no output file** → the whole ~30 h run
+  fails and the step's output shows **Unavailable**. Now it always writes a report:
+  empty ranking + no expansion → a clear *inconclusive* report (exit 0); LLM failure →
+  falls back to the grounded evidence block with a note. Added `--no-llm`/`GL_NO_LLM`
+  to bypass the model (used by the tests). Image bumped to `nelly-genome-linter-llm:v5`.
+
 ## [Unreleased] — Repeat-expansion handling + intermediate-output policy
 
 Follow-up to the Exomiser redesign, closing the gap it exposed on repeat-expansion
