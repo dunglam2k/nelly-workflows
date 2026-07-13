@@ -1,7 +1,6 @@
 {
     "ref_prefix": "GRCh38",
     "sample_name": "sample",
-    "sex": "female",
     "graph": {
         "class": "File",
         "location": "keep:1d5ad2aefb6e809dddaffea3a0558415+5657/ksa_hg38.gbz"
@@ -73,15 +72,14 @@
         "class": "File",
         "path": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile"
     },
-    "_comment_exomiser": "Exomiser phenotype-driven prioritisation. exomiser_data is the 2512 hg38+phenotype bundle Keep collection (required). hpo_terms is a comma-separated list of the patient's HPO ids driving the ranking (empty -> variant-only, much weaker); set it per sample to match the metadata phenotype. sample_sex is UNKNOWN|MALE|FEMALE.",
+    "_comment_patient_context": "Patient sex and HPO terms are derived at run time from the Genoor metadata file above. Included phenotype URIs must identify HPO terms (for example http://purl.obolibrary.org/obo/HP_0000726), and patient.gender must be male or female.",
+    "_comment_exomiser": "Exomiser phenotype-driven prioritisation. exomiser_data is the 2512 hg38+phenotype bundle Keep collection (required).",
     "exomiser_data": {
         "class": "Directory",
         "location": "keep:00cbcbd45419c2f051889639deff3431+39145"
     },
     "exomiser_assembly": "hg38",
     "exomiser_data_version": "2512",
-    "hpo_terms": "HP:0000726",
-    "sample_sex": "UNKNOWN",
     "exomiser_top_genes": 10,
     "genomelinter_output_name": "genomelinter-output.txt"
 }

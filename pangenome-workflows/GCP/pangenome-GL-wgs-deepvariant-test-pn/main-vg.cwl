@@ -14,11 +14,6 @@ inputs:
   sample_name:
     type: string
     default: sample
-  sex:
-    type:
-      type: enum
-      symbols: [male, female]
-    default: female
   graph:
     type: File
   ref:
@@ -100,12 +95,6 @@ inputs:
   exomiser_data_version:
     type: string
     default: "2512"
-  hpo_terms:
-    type: string             # comma-separated HPO term IDs, e.g. "HP:0002072,HP:0000726"
-    default: ""
-  sample_sex:
-    type: string
-    default: "UNKNOWN"
   exomiser_top_genes:
     type: int
     default: 10
@@ -223,7 +212,9 @@ steps:
       aligned_reads: samtools-markdup-index/aligned_reads_indexed
       ref: ref
       variant_catalog: eh_variant_catalog
-      sex: sex
+      # Genoor metadata is the single source of truth for patient sex.  The
+      # context step emits ExpansionHunter's lower-case vocabulary.
+      sex: phenofrommetadata/expansionhunter_sex
       output_prefix: eh_output_prefix
     out: [vcf, json]
     run: expansionhunter.cwl
@@ -274,7 +265,7 @@ steps:
   phenofrommetadata:
     in:
       metadata: metadata
-    out: [pheno_output]
+    out: [pheno_output, hpo_terms, expansionhunter_sex, exomiser_sex]
     run: phenofrommetadata.cwl
 
   # Strip records inside ExpansionHunter ReferenceRegions before Exomiser: DeepVariant
@@ -298,8 +289,9 @@ steps:
       exomiser_data: exomiser_data
       exomiser_assembly: exomiser_assembly
       exomiser_data_version: exomiser_data_version
-      hpo_terms: hpo_terms
-      sample_sex: sample_sex
+      hpo_terms: phenofrommetadata/hpo_terms
+      # Exomiser uses upper-case MALE/FEMALE for the same metadata value.
+      sample_sex: phenofrommetadata/exomiser_sex
     out: [exomiser_genes_tsv, exomiser_variants_tsv, exomiser_json, exomiser_html]
     run: exomiser.cwl
 

@@ -1,0 +1,19 @@
+id: 201
+patient:
+  phenotypes:
+    - phenotype:
+        uri: http://purl.obolibrary.org/obo/HP_0002072
+        label: Chorea
+      excluded: false
+    - phenotype:
+        uri: http://purl.obolibrary.org/obo/HP_0000726
+        label: Dementia
+      excluded: false
+    - phenotype:
+        uri: http://purl.obolibrary.org/obo/HP_0002311
+        label: Incoordination
+      excluded: false
+  identifier: HD1
+  gender: male
+is_trio: false
+status: submitted

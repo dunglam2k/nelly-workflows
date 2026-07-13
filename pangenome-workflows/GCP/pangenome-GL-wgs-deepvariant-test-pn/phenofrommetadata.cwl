@@ -2,9 +2,14 @@ cwlVersion: v1.1
 class: CommandLineTool
 baseCommand:
   - python
-  - /app/phenofrommetadata.py
+  - patient_context.py
 requirements:
   InlineJavascriptRequirement: {}
+  InitialWorkDirRequirement:
+    listing:
+      - entryname: patient_context.py
+        entry:
+          $include: patient_context.py
   DockerRequirement:
     dockerPull: 'dunglam2k/phenofrommetadata:v1.01'
 inputs:
@@ -14,16 +19,27 @@ inputs:
       position: 1
 
 outputs:
-  pheno_output: 
+  pheno_output:
     type: string
     outputBinding:
       glob: phenofile.txt
       loadContents: true
-      # Return the raw phenotype string (trailing newline stripped). Do NOT wrap it
-      # in literal double-quotes: the consumer (genome-linter) already passes it via
-      # an env var, and the old '"' + contents + '"' wrapper combined with that
-      # consumer's own quoting produced ""Chorea;Huntington disease"" — the ';' then
-      # split the shell command, dropped the VCF arg and crashed the linter.
       outputEval: ${ return self[0].contents.replace(/[\r\n]+$/, ''); }
-
-stdout: phenofile.txt
+  hpo_terms:
+    type: string
+    outputBinding:
+      glob: hpo_terms.txt
+      loadContents: true
+      outputEval: ${ return self[0].contents.replace(/[\r\n]+$/, ''); }
+  expansionhunter_sex:
+    type: string
+    outputBinding:
+      glob: expansionhunter_sex.txt
+      loadContents: true
+      outputEval: ${ return self[0].contents.replace(/[\r\n]+$/, ''); }
+  exomiser_sex:
+    type: string
+    outputBinding:
+      glob: exomiser_sex.txt
+      loadContents: true
+      outputEval: ${ return self[0].contents.replace(/[\r\n]+$/, ''); }
