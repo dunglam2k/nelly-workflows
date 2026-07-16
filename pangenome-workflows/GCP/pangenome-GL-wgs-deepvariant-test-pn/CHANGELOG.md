@@ -3,6 +3,25 @@
 All notable changes to the annotation/interpretation tail of this workflow
 (`main-vg.cwl`: VEP → slivar → genome-linter) are documented here.
 
+## [Unreleased] — Genoor patient context inputs
+
+### Changed
+
+- **Patient-specific HPO terms and sex are no longer hard-coded in
+  `main-vg-pn.json`.** `phenofrommetadata.cwl` now derives included HPO IDs and
+  `patient.gender` from the Genoor metadata YAML already supplied to each run.
+  The same gender value is normalized to ExpansionHunter's `male|female` and
+  Exomiser's `MALE|FEMALE` vocabularies, preventing contradictory settings.
+- Metadata without an included HPO-coded phenotype, or without a sex supported
+  by ExpansionHunter, now fails immediately with an actionable error instead of
+  silently running weak variant-only prioritization or assuming a sex.
+
+### Added
+
+- **`patient_context.py` and offline tests** covering Genoor ontology URIs,
+  direct HPO IDs, excluded phenotypes, duplicate terms, sex normalization, and
+  invalid metadata.
+
 ## [Unreleased] — Runnable input template, genome-linter robustness, tests
 
 Fixes the two problems that blocked a rerun, and adds a test suite so neither can

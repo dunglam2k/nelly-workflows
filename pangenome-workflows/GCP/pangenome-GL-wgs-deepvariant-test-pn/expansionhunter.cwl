@@ -44,9 +44,10 @@ inputs:
     type: string
     default: "/opt/eh-catalog/variant_catalog.json"
   sex:
-    type:
-      type: enum
-      symbols: [male, female]
+    # The parent workflow derives and validates this as male|female from Genoor
+    # metadata.  Keep this a string so a value emitted by another CWL tool can be
+    # connected without document-scoped enum-symbol incompatibilities.
+    type: string
     default: female
   output_prefix:
     type: string
