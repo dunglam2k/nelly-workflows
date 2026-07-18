@@ -72,7 +72,7 @@
         "class": "File",
         "path": "keep:00528ccfa8b07fd08907077b1f4fe3e9+927/fastafile"
     },
-    "_comment_patient_context": "Patient sex and HPO terms are derived at run time from the Genoor metadata file above. Included phenotype URIs must identify HPO terms (for example http://purl.obolibrary.org/obo/HP_0000726), and patient.gender must be male or female.",
+    "_comment_patient_context": "Patient sex and HPO terms are derived at run time from the Genoor metadata file above. Included phenotype URIs should identify HPO terms (for example http://purl.obolibrary.org/obo/HP_0000726), and patient.gender must be male or female. For a legacy Genoor record whose phenotype URIs are null, supply the curated comma-separated list as the optional hpo_terms input; coded metadata always takes precedence.",
     "_comment_exomiser": "Exomiser phenotype-driven prioritisation. exomiser_data is the 2512 hg38+phenotype bundle Keep collection (required).",
     "exomiser_data": {
         "class": "Directory",
