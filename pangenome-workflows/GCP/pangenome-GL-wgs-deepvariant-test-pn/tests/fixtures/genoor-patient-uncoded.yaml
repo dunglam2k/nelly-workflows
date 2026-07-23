@@ -1,0 +1,15 @@
+id: 201
+patient:
+  phenotypes:
+    - phenotype:
+        uri: null
+        label: Chorea
+      excluded: false
+    - phenotype:
+        uri: null
+        label: Huntington disease
+      excluded: false
+  identifier: HD1
+  gender: male
+is_trio: false
+status: submitted

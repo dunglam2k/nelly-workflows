@@ -95,6 +95,11 @@ inputs:
   exomiser_data_version:
     type: string
     default: "2512"
+  hpo_terms:
+    # Legacy fallback only. Genoor metadata with coded HPO phenotype URIs takes
+    # precedence; this keeps older records with null URIs runnable.
+    type: string
+    default: ""
   exomiser_top_genes:
     type: int
     default: 10
@@ -265,6 +270,7 @@ steps:
   phenofrommetadata:
     in:
       metadata: metadata
+      fallback_hpo_terms: hpo_terms
     out: [pheno_output, hpo_terms, expansionhunter_sex, exomiser_sex]
     run: phenofrommetadata.cwl
 

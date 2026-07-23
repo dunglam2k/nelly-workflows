@@ -36,7 +36,32 @@ def _phenotype_term(item: object) -> dict[str, Any]:
     return nested if isinstance(nested, dict) else item
 
 
-def parse_patient_context(document: dict[str, Any]) -> dict[str, str]:
+def _parse_hpo_terms(value: str) -> list[str]:
+    """Parse and validate a legacy comma/space-separated HPO term list."""
+
+    if not value.strip():
+        return []
+
+    hpo_terms: list[str] = []
+    invalid: list[str] = []
+    for token in re.split(r"[,;\s]+", value.strip()):
+        hpo_id = _normalise_hpo_id(token)
+        if hpo_id is None:
+            invalid.append(token)
+        elif hpo_id not in hpo_terms:
+            hpo_terms.append(hpo_id)
+
+    if invalid:
+        raise ValueError(
+            "fallback HPO terms must contain only HP identifiers; invalid "
+            f"value(s): {', '.join(invalid)}"
+        )
+    return hpo_terms
+
+
+def parse_patient_context(
+    document: dict[str, Any], fallback_hpo_terms: str = ""
+) -> dict[str, str]:
     """Convert a Genoor metadata mapping to CWL-ready patient context strings."""
 
     patient = document.get("patient")
@@ -85,11 +110,19 @@ def parse_patient_context(document: dict[str, Any]) -> dict[str, str]:
         if hpo_id and hpo_id not in hpo_terms:
             hpo_terms.append(hpo_id)
 
+    # Older Genoor records contain phenotype labels but serialize every ontology
+    # URI as null.  Existing workflow jobs already carry the curated Exomiser HPO
+    # list, so retain that value as a compatibility fallback.  Never merge it into
+    # coded metadata: when Genoor does provide identifiers, it remains the source
+    # of truth and a stale job-template value cannot alter the patient's context.
     if not hpo_terms:
-        raise ValueError(
-            "metadata contains no included HPO-coded phenotype; select at least "
-            "one HPO term for the patient in Genoor"
-        )
+        hpo_terms = _parse_hpo_terms(fallback_hpo_terms)
+        if not hpo_terms:
+            raise ValueError(
+                "metadata contains no included HPO-coded phenotype and no "
+                "fallback HPO terms were supplied; add ontology identifiers in "
+                "Genoor or provide the workflow hpo_terms input"
+            )
 
     return {
         "phenotype_labels": ";".join(labels),
@@ -112,8 +145,11 @@ def write_outputs(context: dict[str, str], output_dir: Path = Path(".")) -> None
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        print("usage: patient_context.py METADATA.yaml", file=sys.stderr)
+    if len(args) not in (1, 2):
+        print(
+            "usage: patient_context.py METADATA.yaml [FALLBACK_HPO_TERMS]",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -121,7 +157,8 @@ def main(argv: list[str] | None = None) -> int:
             document = yaml.safe_load(stream)
         if not isinstance(document, dict):
             raise ValueError("metadata root must be a mapping")
-        write_outputs(parse_patient_context(document))
+        fallback_hpo_terms = args[1] if len(args) == 2 else ""
+        write_outputs(parse_patient_context(document, fallback_hpo_terms))
     except (OSError, ValueError, yaml.YAMLError) as exc:
         print(f"patient metadata error: {exc}", file=sys.stderr)
         return 2

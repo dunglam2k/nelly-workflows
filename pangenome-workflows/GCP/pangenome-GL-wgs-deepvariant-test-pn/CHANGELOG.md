@@ -5,6 +5,18 @@ All notable changes to the annotation/interpretation tail of this workflow
 
 ## [Unreleased] — Genoor patient context inputs
 
+### Fixed
+
+- Legacy Genoor metadata can contain valid phenotype labels but serialize their
+  ontology URIs as `null`. This made `patient_context.py` exit before writing any
+  output, after which CWL's four `self[0].contents` expressions obscured the cause
+  with `TypeError: Cannot read property 'contents' of undefined`. The extractor now
+  uses the existing, validated workflow `hpo_terms` value as a compatibility fallback
+  only when metadata supplies no HPO identifiers. Coded metadata still takes
+  precedence, and malformed fallback identifiers fail validation. Output collection
+  also guards missing files after a nonzero tool exit, preserving the actionable
+  extractor error instead of raising a secondary JavaScript exception.
+
 ### Changed
 
 - **Patient-specific HPO terms and sex are no longer hard-coded in
@@ -12,15 +24,16 @@ All notable changes to the annotation/interpretation tail of this workflow
   `patient.gender` from the Genoor metadata YAML already supplied to each run.
   The same gender value is normalized to ExpansionHunter's `male|female` and
   Exomiser's `MALE|FEMALE` vocabularies, preventing contradictory settings.
-- Metadata without an included HPO-coded phenotype, or without a sex supported
-  by ExpansionHunter, now fails immediately with an actionable error instead of
-  silently running weak variant-only prioritization or assuming a sex.
+- Metadata without an included HPO-coded phenotype and without fallback HPO terms,
+  or without a sex supported by ExpansionHunter, now fails immediately with an
+  actionable error instead of silently running weak variant-only prioritization or
+  assuming a sex.
 
 ### Added
 
 - **`patient_context.py` and offline tests** covering Genoor ontology URIs,
-  direct HPO IDs, excluded phenotypes, duplicate terms, sex normalization, and
-  invalid metadata.
+  direct HPO IDs, excluded phenotypes, duplicate terms, null-URI fallback and
+  precedence, CLI output generation, sex normalization, and invalid metadata.
 
 ## [Unreleased] — Runnable input template, genome-linter robustness, tests
 
