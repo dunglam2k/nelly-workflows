@@ -3,6 +3,56 @@
 All notable changes to the annotation/interpretation tail of this workflow
 (`main-vg.cwl`: VEP → slivar → genome-linter) are documented here.
 
+## [Unreleased] — Candidate re-ranking: repeat expansions and recessive genotypes
+
+Closes the two misses from the 18 Oct 2026 reruns, where the summary named a
+heterozygous likely-pathogenic variant in a dominant gene for both a Tay-Sachs case
+(homozygous pathogenic HEXA splice variant ranked #2 by Exomiser) and a Huntington
+case (pathogenic-range HTT expansion present but absent from the ranking, and a
+self-contradictory prompt). Nothing added is specific to a gene, locus or sample.
+
+### Changed
+
+- **`genome-linter-llm/blurb.py` — the candidate list is now re-ranked, not Exomiser's
+  raw order.** `rank_candidates()` merges ExpansionHunter pathogenic-range expansions
+  with Exomiser's gene table and orders by documented tiers (see the `RANKING RULES`
+  block): (0) pathogenic-range repeat expansion; (1) biallelic — homozygous,
+  hemizygous or putative compound-het — pathogenic/likely-pathogenic variant(s) in a
+  recessive-mode gene with a phenotype fit; (2) monoallelic P/LP variant in a
+  dominant-mode gene with a phenotype fit; (3) everything else in Exomiser order.
+  Within tiers 1–2: ACMG class (P before LP; weaker allele counts for a pair), then
+  Exomiser combined score. P/LP is Exomiser's own ACMG class of *contributing*
+  variants; phenotype fit is a human-disease term match (`HUMAN_PHENO_SCORE > 0`) with
+  an Exomiser phenotype score ≥ 0.5 (its uninformative default). Repeat expansions are
+  tier 0 unconditionally — the catalogue thresholds are full-penetrance thresholds and
+  the step receives phenotype labels only, so fit is stated by the summary rather than
+  computed. `--top` now applies **after** re-ranking (the whole Exomiser table is read),
+  so a promoted candidate is never lost to Exomiser's cut.
+- **Prompt is consistent by construction.** Exactly one leader instruction is emitted
+  from the re-ranked list: lead with the repeat expansion(s) and do not name any
+  SNV/indel gene as the leader; or present effectively tied leaders as a differential;
+  or allow a single leading candidate. The old pair of independent rules (EH "lead with
+  it" + "you may name [top Exomiser gene] as the single leading candidate") is gone, as
+  is "rank ONLY by Exomiser's combined score"; the model is told to keep the listed
+  order and cite each candidate's stated rank basis. Evidence lines now carry genotype,
+  ACMG class and HGVS per variant. Report header lists the re-ranked candidates and,
+  separately, Exomiser's own order for traceability.
+- Image bumped to `nelly-genome-linter-llm:v6` (`blurb.py` is baked in; rebuild
+  required before the next cluster run).
+
+### Added
+
+- **`tests/test_ranking.py`** (39 offline tests) and fixtures `tests/fixtures/TS2`,
+  `tests/fixtures/HD2` trimmed from the 18 Oct 2026 Arvados reruns
+  (`cborg-xvhdp-ye18ubaegv36emq`, `cborg-xvhdp-07lz98jbuesn6z8`). Covers: HEXA first on
+  both Tay-Sachs fixtures (TS2 is the run where Exomiser had it second); HTT expansion
+  first on both Huntington fixtures; the prompt never contains both the expansion lead
+  rule and a single-leading-candidate instruction, and exactly one leader instruction
+  overall; and each generic rule on synthetic genes (compound-het, carrier state,
+  hemizygous XR, phased genotypes, no-fit demotion, VUS never promoted, non-contributing
+  rows ignored, MOI-separated variant sets, tier-3 Exomiser order, `--top` after
+  re-ranking).
+
 ## [Unreleased] — Genoor patient context inputs
 
 ### Fixed
