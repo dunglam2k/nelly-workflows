@@ -341,3 +341,25 @@ def test_report_candidate_list_starts_with_true_diagnosis(disease, first, tmp_pa
                "--no-llm", "--output", str(out)], monkeypatch)
     text = out.read_text()
     assert "1.%s" % first in text
+
+
+# --- Conclusion instruction: decided in code, never a conditional for the model -------
+
+@pytest.mark.parametrize("disease", ALL_FIXTURES)
+def test_prompt_with_supported_candidate_forbids_inconclusive(disease):
+    p = prompt_for(disease)
+    assert blurb.SUPPORTED_MARKER in p
+    assert "state that " + blurb.INCONCLUSIVE_MARKER not in p
+
+
+def test_prompt_conclusion_markers_are_mutually_exclusive():
+    genes = [gene_row("A", "AD", 0.90, 0.70, 0.70), gene_row("B", "AD", 0.50, 0.70, 0.70)]
+    variants = [var_row("A", "AD", 100, "0/1", "UNCERTAIN_SIGNIFICANCE"),
+                var_row("B", "AD", 200, "0/1", "UNCERTAIN_SIGNIFICANCE")]
+    ranked = rank(genes, variants)
+    assert all(c["tier"] == blurb.TIER_OTHER for c in ranked)
+    text = blurb.conclusion_instruction(ranked)
+    assert blurb.INCONCLUSIVE_MARKER in text and blurb.SUPPORTED_MARKER not in text
+    supported = blurb.conclusion_instruction(
+        rank([gene_row("C", "AR", 0.5, 0.7, 0.7)], [var_row("C", "AR", 300, "1/1", "PATHOGENIC")]))
+    assert blurb.SUPPORTED_MARKER in supported and "state that" not in supported

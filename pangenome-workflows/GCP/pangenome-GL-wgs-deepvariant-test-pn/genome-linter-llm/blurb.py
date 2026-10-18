@@ -348,6 +348,11 @@ def rank_candidates(genes, vmap, eh_flags=None, top_n=None):
 EH_LEAD_MARKER = "LEAD WITH THE REPEAT EXPANSION"
 SINGLE_LEADER_MARKER = "single leading candidate"
 TIE_MARKER = "effectively TIED"
+# Marker phrases of the two mutually exclusive conclusion instructions. The decision is
+# made here, not left to the model: a small model given the conditional rule "if there
+# is neither ... say inconclusive" applied it even after naming a supported leader.
+INCONCLUSIVE_MARKER = "the result is inconclusive"
+SUPPORTED_MARKER = "do NOT call the result inconclusive"
 TIE_MARGIN = 0.05
 MAX_VARIANTS_SHOWN = 4
 
@@ -424,6 +429,18 @@ def leader_instruction(ranked):
             % (lead["gene"], SINGLE_LEADER_MARKER))
 
 
+def conclusion_instruction(ranked):
+    """Exactly ONE of two instructions about the overall conclusion: a supported
+    candidate exists (tiers 0-2: repeat expansion, or P/LP variant with genotype/MOI
+    and phenotype fit) or the result is inconclusive."""
+    if any(c["tier"] < TIER_OTHER for c in ranked):
+        return ("- At least one candidate is supported (see its rank basis), so %s."
+                % SUPPORTED_MARKER)
+    return ("- No candidate has a pathogenic-range repeat expansion or a pathogenic/"
+            "likely-pathogenic variant with a phenotype fit: state that %s."
+            % INCONCLUSIVE_MARKER)
+
+
 def build_prompt(phenotype, genes, vmap, eh_flags=None, ranked=None):
     ranked = rank_candidates(genes, vmap, eh_flags) if ranked is None else ranked
     lines = []
@@ -455,14 +472,14 @@ def build_prompt(phenotype, genes, vmap, eh_flags=None, ranked=None):
           of inheritance. For a repeat expansion cite the repeat genotype and threshold.
         - Do NOT introduce genes, diseases, or facts not in the evidence, and do NOT use
           outside clinical knowledge to argue for or against a candidate.
-        - If there is neither a repeat expansion nor a candidate with a pathogenic or
-          likely-pathogenic variant and a phenotype fit, say the result is inconclusive.
+        %s
 
         --- EVIDENCE ---
         %s
         --- END EVIDENCE ---
 
-        Interpretation:""").strip() % (leader_instruction(ranked), evidence)
+        Interpretation:""").strip() % (leader_instruction(ranked),
+                                       conclusion_instruction(ranked), evidence)
     return instruction
 
 

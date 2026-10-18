@@ -13,6 +13,7 @@ self-contradictory prompt). Nothing added is specific to a gene, locus or sample
 
 ### Changed
 
+- **`genome-linter-llm/blurb.py` — the conclusion is decided in code.** `conclusion_instruction()` emits exactly one of "supported candidate, do NOT call the result inconclusive" or "state that the result is inconclusive", from the re-ranked tiers. The old conditional rule ("if there is neither ... say inconclusive") made the 3B model end both test summaries with "inconclusive" after naming the correct leader. Verified with the rebuilt v6 image on both 18 Oct reruns: HEXA and HTT lead, no inconclusive conclusion.
 - **`genome-linter-llm/blurb.py` — the candidate list is now re-ranked, not Exomiser's
   raw order.** `rank_candidates()` merges ExpansionHunter pathogenic-range expansions
   with Exomiser's gene table and orders by documented tiers (see the `RANKING RULES`
