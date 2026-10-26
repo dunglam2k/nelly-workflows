@@ -1,9 +1,12 @@
 cwlVersion: v1.1
 class: CommandLineTool
 # Grounded genome-linter: a LOCAL small LLM (Qwen2.5-3B, baked into the image)
-# writes a clinical interpretation of Exomiser's ranked output. It only summarises
-# the supplied evidence -- it does not rank or recall genes -- so it cannot bury
-# the true causative gene the way the old phenotype-label-only ranker did.
+# writes a clinical interpretation of a re-ranked candidate list: ExpansionHunter
+# pathogenic-range repeat expansions plus Exomiser genes, ordered by genotype / mode
+# of inheritance / ACMG class (see the RANKING RULES block in genome-linter-llm/blurb.py).
+# The model only summarises the supplied evidence -- it does not rank or recall genes --
+# so it cannot bury the true causative gene the way the old phenotype-label-only ranker
+# did. blurb.py is baked into the image: bump the tag and rebuild whenever it changes.
 #
 # Direct command (no inline shell): blurb.py reads the phenotype from $GL_PHENOTYPE.
 baseCommand: [python, /app/blurb.py]
@@ -16,7 +19,7 @@ requirements:
     envDef:
       GL_PHENOTYPE: $(inputs.phenotype)
   DockerRequirement:
-    dockerPull: 'nelly-genome-linter-llm:v5'
+    dockerPull: 'nelly-genome-linter-llm:v6'
 arguments:
   - prefix: --genes
     valueFrom: $(inputs.exomiser_genes_tsv.path)
